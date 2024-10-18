@@ -1,0 +1,191 @@
+{% schema %}
+{
+  "name": "Like and Comment Block",
+  "settings": [
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Block Heading",
+      "autofill": true
+    }
+  ],
+  "target": "section"
+}
+{% endschema %}
+{% if customer %}
+<div id="product-likes" style="margin-bottom: 20px;">
+  <button id="like-button" onclick="likeProduct('{{ product.id }}', '{{ shop.name }}')">Like</button>
+  <span id="like-count" style="margin-left: 10px;">0 likes</span>
+</div>
+
+<div id="product-comments">
+  <form id="comment-form" onsubmit="submitComment('{{ product.id }}', '{{ shop.id }}', '{{ shop.name }}'); return false;">
+    <textarea id="comment-textarea" name="comment" placeholder="Leave a comment"></textarea>
+    <button id="submit-comment" type="submit">Submit</button>
+  </form>
+<h5>Comments</h5>
+  <div id="approved-comments"></div>
+</div>
+{% else %}
+<p>Please <a href="/account/login?return_url={{ shop.url }}/products/{{ product.handle }}">log in</a> to like and comment on products.</p>
+{% endif %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    const productId = '{{ product.id }}';
+    const shopId = '{{ shop.id }}';
+    const shopName = '{{ shop.name }}'
+    const customerId = '{{ customer.id }}'
+
+    try {
+      const likesResponse = await fetch(`https://mutual-splendid-quagga.ngrok-free.app/api/get-likes?productId=${productId}&shopId=${shopId}&customerId=${customerId}`);
+      const likesData = await likesResponse.json();
+      console.log(likesData,"this is likesdata");
+
+      const likeCount = likesData.likeCount || 0;
+      const isLiked = likesData.isLiked;
+      document.getElementById('like-button').innerText = `${isLiked ? "Unlike" : "Like"}`
+      document.getElementById('like-count').textContent = `${likeCount} likes`;
+
+      const commentsResponse = await fetch(`https://mutual-splendid-quagga.ngrok-free.app/api/get-comment?productId=${productId}&shopId=${shopId}`);
+      const commentsData = await commentsResponse.json();
+
+      const commentsContainer = document.getElementById('approved-comments');
+    commentsData.comments.forEach(comment => {
+      console.log(comment)
+      if (comment.status === "Approved") { 
+        const commentElement = document.createElement('p');
+        commentElement.textContent = `${comment.customerId}: ${comment.comment}`;
+        commentsContainer.appendChild(commentElement);
+      }
+    });
+    } catch (error) {
+      console.error('Error fetching product data:', error);
+    }
+  });
+
+  async function likeProduct(productId, shopName) {
+    try {
+      console.log("inside like", shopName)
+      const response = await fetch(`https://mutual-splendid-quagga.ngrok-free.app/api/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: productId,
+          customerId: '{{ customer.id }}',
+          shopId: '{{ shop.id }}',
+          shopName
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        const likeCountElement = document.getElementById('like-count');
+        const currentLikeCount = parseInt(likeCountElement.textContent) || 0;
+        if(result.isLiked){
+          likeCountElement.textContent = `${currentLikeCount + 1} likes`; 
+          document.getElementById('like-button').innerText = `Unlike`
+        }
+        else {
+          document.getElementById('like-button').innerText = `Like`
+
+          likeCountElement.textContent = `${currentLikeCount - 1} likes`;
+        }
+      } else {
+        console.error('Error liking product:', result.message);
+      }
+    } catch (error) {
+      console.error('Error liking product:', error);
+    }
+  }
+
+  async function submitComment(productId, shopId, shopName) {
+    const commentText = document.querySelector('textarea[name="comment"]').value;
+    if (!commentText) return;
+
+    try {
+      const response = await fetch(`https://mutual-splendid-quagga.ngrok-free.app/api/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: productId,
+          customerId: '{{ customer.id }}',
+          shopId: shopId,
+          comment: commentText,
+          shopName: shopName
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        document.querySelector('textarea[name="comment"]').value = '';
+        alert('Your comment has been submitted and is awaiting approval.');
+
+        /*
+        const commentsContainer = document.getElementById('approved-comments');
+        const commentElement = document.createElement('p');
+        commentElement.textContent = `{{ customer.name }}: ${commentText}`;
+        commentsContainer.appendChild(commentElement);
+        */
+      } else {
+        console.error('Error submitting comment:', result.message);
+      }
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+    }
+  }
+</script>
+
+<!-- Add basic CSS styling -->
+<style>
+  #like-button {
+    background-color: #ff4c5b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  #like-button:hover {
+    background-color: #ff2c3c;
+  }
+
+  #comment-form {
+    margin-top: 20px;
+  }
+
+  #comment-textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  #submit-comment {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  #submit-comment:hover {
+    background-color: #45a049;
+  }
+
+  .approved-comment {
+    background-color: #f9f9f9;
+    border-left: 3px solid #4caf50;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+  }
+</style>
