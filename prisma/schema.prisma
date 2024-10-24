@@ -50,3 +50,16 @@ model Comment {
   shopName   String
   createdAt  DateTime @default(now())
 }
+
+model Product {
+  id              String   @id @default(uuid())
+  shopifyId       String   @unique
+  title           String
+  description     String
+  imageUrl        String
+  shopId          String
+  likesEnabled    Boolean  @default(true)
+  commentsEnabled Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

@@ -28,6 +28,8 @@ export default function App() {
         <Link to="/app/additional">Additional page</Link>
         <Link to="/app/likes">Products Likes</Link>
         <Link to="/app/comments">Products Comments</Link>
+        <Link to="/app/products">Products</Link>
+
 
       </NavMenu>
       <Outlet />
